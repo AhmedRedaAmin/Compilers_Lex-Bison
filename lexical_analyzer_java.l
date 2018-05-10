@@ -4,8 +4,7 @@
 %%
 ";"		                    return "semi_colon";
 "-"?[0-9]+                  {yylval.ival = atoi(yytext) ; return "integer_val";}
-"-"?[0-9]+.[0-9]+           {yylval.ival = atof(yytext) ; return "float_val";}
-\".*\"                      {yylval.sval = strdup(yytext); return "string_val";}
+"-"?[0-9]+.[0-9]+           {yylval.fval = atof(yytext) ; return "float_val";}
 "true"|"false"              return "boolean";
 "=="|"!="|">"|">="|"<"|"<=" return "relop";
 "&&"|"||"                   return "boolop";
@@ -19,7 +18,6 @@
 "}" 			            return "right_brace_curly";
 "["                         return "left_brace_square";
 "]"                         return "right_brace_square";
-"System.out.println"	    return "print";
 "if"			            return "if";
 "else"			            return "else";
 "while"			            return "while";
@@ -27,8 +25,7 @@
 "int"			            return "int";
 "float"			            return "float";
 "boolean" 		            return "boolean";
-"String"                    return "String";
-[a-zA-Z][a-zA-Z0-9]*		return "id";
+[a-zA-Z][a-zA-Z0-9]*		{yylval.sval = strdup(yytext); return "id";}
 .                           ;
 
 %%
