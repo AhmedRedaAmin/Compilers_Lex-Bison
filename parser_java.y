@@ -13,14 +13,27 @@ void yyerror(const char* s);
 %union {
 	int ival;
 	float fval;
+	char* sval;
 }
 
-%token<ival> T_INT
-%token<fval> T_FLOAT
-%token T_PLUS T_MINUS T_MULTIPLY T_DIVIDE T_LEFT T_RIGHT
-%token T_NEWLINE T_QUIT
-%left T_PLUS T_MINUS
-%left T_MULTIPLY T_DIVIDE
+%token<ival>    integer_val
+%token<fval>    float_val
+%token<sval>    id relop boolop addop mulop bitop
+%token          semi_colon boolean assignment left_brace right_brace
+%token          left_brace_curly right_brace_curly left_brace_square right_brace_square if_s else_s
+%token          while_s for_s int_s float_s boolean_s
+%left           relop
+%left           boolop
+%left           bitop
+%left           addop
+%left           mulop
+
+
+
+
+
+
+
 
 %type<ival> expression
 %type<fval> mixed_expression
