@@ -3,7 +3,7 @@
 
 #define YY_DECL int yylex()
 
-#include "parser_java.tab.h"
+#include "y.tab.h"
 %}
 
 %%

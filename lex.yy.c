@@ -511,7 +511,7 @@ char *yytext;
 
 #define YY_DECL int yylex()
 
-#include "parser_java.tab.h"
+#include "y.tab.h"
 #line 516 "lex.yy.c"
 
 #define INITIAL 0
