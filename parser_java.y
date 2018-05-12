@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <fstream>
 #include <map>
 #include <set>
 #include <string>
@@ -24,7 +25,7 @@ typedef enum {AND, OR, NOT} BOOL_OPER;
 typedef enum {PLUS, MINUS, MUL, DIV, MOD, BIT_AND, BIT_OR} Operators;
 typedef enum {EQ, NE, GT, GTE, LT, LTE} Log_operators;
 
-
+ofstream out("output.class");
 std::map<std::string, std::pair<int, int> > variables;
 std::set<std::pair<int, std::string> > output_byte_code;
 int var_count = 0;
@@ -515,8 +516,13 @@ void back_patch(std::vector<int> *list, int curr_location)
     }
 }
 
-int main() {
-	yyin = stdin;
+int main()
+{
+    FILE *input_file;
+    input_file = fopen("sample_code.txt", "r");
+
+
+	yyin = input_file;
 
 	do { 
 		yyparse();
@@ -524,7 +530,7 @@ int main() {
 
     for (auto it = output_byte_code.begin(); it != output_byte_code.end(); ++it)
     {
-        std::cout << it->first << it->second << std::endl;
+        out << it->first << it->second << std::endl;
     }
 	return 0;
 }

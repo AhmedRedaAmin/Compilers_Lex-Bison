@@ -12,5 +12,5 @@ error:
 	bison --verbose parser_java.y
 
 clean:
-	rm lex.yy.c *.tab.c *.tab.h a.out 
+	rm lex.yy.c *.tab.c *.tab.h a.out *.class
 	rm -r cmake-build-debug
