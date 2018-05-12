@@ -11,14 +11,6 @@ exec: all
 error:
 	bison --verbose parser_java.y
 
-calc.tab.c calc.tab.h:	calc.y
-	bison -d calc.y
-
-lex.yy.c: calc.l calc.tab.h
-	flex c alc.l
-
-calc: lex.yy.c calc.tab.c calc.tab.h
-	gcc -o calc calc.tab.c lex.yy.c
-
 clean:
-	rm calc calc.tab.c lex.yy.c calc.tab.h
+	rm lex.yy.c *.tab.c *.tab.h a.out 
+	rm -r cmake-build-debug
