@@ -18,9 +18,9 @@ extern int yylex();
 extern int yyparse();
 extern FILE* yyin;
 
-
 // Declarations of used data-structures
 typedef enum {INT_T, FLOAT_T} Type;
+typedef enum {AND, OR, NOT} BOOL_OPER;
 typedef enum {PLUS, MINUS, MUL, DIV, MOD, BIT_AND, BIT_OR} Operators;
 typedef enum {EQ, NE, GT, GTE, LT, LTE} Log_operators;
 
@@ -30,9 +30,9 @@ std::set<std::pair<int, std::string> > output_byte_code;
 int var_count = 0;
 int pc = 0;
 
-std::vector<int> make_list(int curr_pc);
-std::vector<int> merge_list(std::vector<int> true_l, std::vector<int> false_l);
-void back_patch(std::vector<int> list, int curr_location);
+std::vector<int> *make_list(int curr_pc);
+std::vector<int> *merge_list(std::vector<int> *true_l, std::vector<int> *false_l);
+void back_patch(std::vector<int> *list, int curr_location);
 
 
 void yyerror(const char* s);
@@ -49,21 +49,22 @@ void yyerror(const char* s);
 	int ival;
 	float fval;
 	char* sval;
-	typedef struct
-	{
-	    vector<int> true_list, false_list;
-	} boolean_expr;
-    typedef struct
-	{
-	    vector<int> next_list;
-	} stmt;
+    struct
+        {
+            vector<int> *true_list, *false_list;
+        } b_expr;
+    struct
+        {
+            vector<int> *next_list;
+        } stmt_;
+
 	int type;
 }
 
 %token<ival>    integer_val
 %token<fval>    float_val
-%token<sval>    id relop boolop addop mulop bitop
-%token          semi_colon boolean assignment left_brace right_brace
+%token<sval>    id relop boolop addop mulop bitop boolean
+%token          semi_colon assignment left_brace right_brace
 %token          left_brace_curly right_brace_curly left_brace_square right_brace_square if_s else_s
 %token          while_s for_s int_s float_s boolean_s
 %left           relop
@@ -78,10 +79,18 @@ void yyerror(const char* s);
 %type<type> PRIMITIVE_TYPE
 %type<type> INFIX_OPERATOR
 %type<type> LOGICAL_INFIX_OPERATOR
-%type<boolean_expr> BOOLEAN_EXPRESSION
+%type<b_expr> BOOLEAN_EXPRESSION
 %type<type> MARKER
-%type<stmt> STATEMENT_LIST
-%type<stmt> STATEMENT
+%type<stmt_> STATEMENT_LIST
+%type<stmt_> STATEMENT
+%type<stmt_> NEXT_MARKER
+%type<stmt_> DECLARATION
+%type<stmt_> IF
+%type<stmt_> ASSIGNMENT
+%type<stmt_> WHILE
+%type<type> BOOL_OPERATOR
+%type<stmt_> FOR
+
 
 
 %%
@@ -96,30 +105,36 @@ METHOD_BODY:
 STATEMENT_LIST:
         STATEMENT
         {
-            $$.nextlist =  $1.nextlist;
-        };
+            $$.next_list =  $1.next_list;
+        }
       | STATEMENT_LIST MARKER STATEMENT
         {
-            backpatch($1.nextlist, $2);
-            $$.nextlist =  $3.nextlist;
+            back_patch($1.next_list, $2);
+            $$.next_list =  $3.next_list;
         };
 
 STATEMENT :
         DECLARATION
         {
-
-        };
+            vector<int> * tmp = new vector<int>();
+            $$.next_list = tmp;
+        }
       | IF
         {
-
-        };
+            $$.next_list = $1.next_list;
+        }
       | WHILE
         {
-
-        };
+            $$.next_list = $1.next_list;
+        }
+      | FOR
+        {
+            $$.next_list = $1.next_list;
+        }
       | ASSIGNMENT
         {
-
+            vector<int> * tmp = new vector<int>();
+            $$.next_list = tmp;
         };
 
 DECLARATION :
@@ -136,7 +151,7 @@ PRIMITIVE_TYPE :
       | float_s
         {
             $$ = FLOAT_T;
-        }
+        };
 
 ASSIGNMENT :
         id  assignment  EXPRESSION semi_colon
@@ -146,12 +161,12 @@ ASSIGNMENT :
             if (current_var.first == INT_T)
             {
                 output_byte_code.insert({pc, ": istore " + std::to_string(current_var.second)});
-                pc ++;
+                pc += 2;
             }
             else
             {
                 output_byte_code.insert({pc, ": fstore " + std::to_string(current_var.second)});
-                pc ++;
+                pc += 2;
             }
         };
 
@@ -160,13 +175,13 @@ EXPRESSION :
           {
                $$ = INT_T;
                output_byte_code.insert({pc, ": ldc " + std::to_string($1)});
-               pc ++;
+               pc += 2;
           }
         | float_val
           {
                $$ = FLOAT_T;
                output_byte_code.insert({pc, ": ldc " + std::to_string($1)});
-               pc ++;
+               pc += 2;
 
           }
         | EXPRESSION INFIX_OPERATOR EXPRESSION
@@ -267,7 +282,7 @@ EXPRESSION :
                    output_byte_code.insert({pc, ": fload " + to_string(variables[$1].second)});
                    $$ = FLOAT_T;
                }
-               pc ++;
+               pc += 2;
           }
         | left_brace EXPRESSION right_brace
           {
@@ -305,132 +320,188 @@ IF :
          left_brace_curly MARKER STATEMENT NEXT_MARKER right_brace_curly
          else_s left_brace_curly MARKER STATEMENT right_brace_curly
          {
-              back_patch($3.true_list, $6);
-              back_patch($3.false_list, $12);
-              auto temp = merge($7.nextlist, $8.nextlist);
+              back_patch ($3.true_list, $6);
+              back_patch ($3.false_list, $12);
+              auto temp = merge_list ($7.next_list, $8.next_list);
+              $$.next_list = merge_list (temp, $13.next_list);
          };
 
 MARKER :
          {
-             cout << "Marker is trigerred!\n";
              $$ = pc;
          };
 
 NEXT_MARKER :
          {
-
+            $$.next_list = make_list(pc);
+            output_byte_code.insert({pc, ": goto "});
+            pc += 3;
          };
 
 BOOLEAN_EXPRESSION:
          EXPRESSION LOGICAL_INFIX_OPERATOR MARKER EXPRESSION
          {
                $$.true_list = make_list(pc);
-               $$.false_list = make_list(pc + 1);
+               $$.false_list = make_list(pc + 3);
                switch($2)
                {
                  case EQ:
                     output_byte_code.insert({pc, ": if_icmpeq "});
-                    pc ++;
                     break;
 
                  case LT:
                     output_byte_code.insert({pc, ": if_icmplt "});
-                    pc ++;
                     break;
 
                  case LTE:
                     output_byte_code.insert({pc, ": if_icmple "});
-                    pc ++;
                     break;
 
                  case GT:
                     output_byte_code.insert({pc, ": if_icmpgt "});
-                    pc ++;
                     break;
 
                  case GTE:
                     output_byte_code.insert({pc, ": if_icmpge "});
-                    pc ++;
                     break;
 
-                 case NEQ:
+                 case NE:
                     output_byte_code.insert({pc, ": if_icmpne "});
-                    pc ++;
                     break;
 
                  default :
                     break;
                }
-
+               pc += 3;
                output_byte_code.insert({pc, ": goto "});
-               pc ++;
+               pc += 3;
          }
+       | BOOLEAN_EXPRESSION BOOL_OPERATOR MARKER BOOLEAN_EXPRESSION
+         {
+            switch ($2)
+            {
+                case OR :
+                    back_patch ($1.false_list, $3);
+                    $$.true_list = merge_list ($1.true_list, $4.true_list);
+                    $$.false_list = $4.false_list;
+                    break;
+                case AND :
+                    back_patch($1.true_list, $3);
+                    $$.false_list = merge_list($1.false_list, $4.false_list);
+                    $$.true_list = $4.true_list;
+                    break;
+            }
+         }
+       | BOOL_OPERATOR BOOLEAN_EXPRESSION
+         {
+            $$.true_list = $2.false_list;
+            $$.false_list = $2.true_list;
+         }
+       | left_brace BOOLEAN_EXPRESSION right_brace
+         {
+            $$.true_list = $2.true_list;
+            $$.false_list = $2.false_list;
+         }
+       | boolean
+         {
+            if (!strcmp($1, "true"))
+            {
+                $$.false_list = new vector<int> ();
+                $$.true_list = make_list(pc);
+            }
+            else
+            {
+                $$.true_list = new vector<int> ();
+                $$.false_list = make_list(pc);
+            }
+           output_byte_code.insert({pc, ": goto "});
+           pc += 3;
+         };
+
+BOOL_OPERATOR :
+            boolop
+            {
+            if (!strcmp($1, "&&"))
+                    $$ = AND;
+            else if (!strcmp($1, "||"))
+                    $$ = OR;
+            else if (!strcmp($1, "!"))
+                    $$ = NOT;
+            };
 
 LOGICAL_INFIX_OPERATOR:
          relop
          {
-            string curr_oper($1);
-            switch (curr_oper)
-            {
-              case "==" :
+            if (!strcmp($1, "=="))
                     $$ = EQ;
-                    break;
-
-              case "!=" :
+            else if (!strcmp($1, "!="))
                     $$ = NE;
-                    break;
-
-              case ">" :
+            else if (!strcmp($1, ">"))
                     $$ = GT;
-                    break;
-
-              case ">=" :
+            else if (!strcmp($1, ">="))
                     $$ = GTE;
-                    break;
-
-              case "<" :
+            else if (!strcmp($1, "<"))
                     $$ = LT;
-                    break;
-
-              case "<=" :
+            else if (!strcmp($1, "<="))
                     $$ = LTE;
-                    break;
-
-              default :
-                    break;
-            }
          };
 
 
 
 
 WHILE :
-         while_s left_brace EXPRESSION right_brace left_brace_curly STATEMENT right_brace_curly
-;
+         while_s left_brace MARKER BOOLEAN_EXPRESSION right_brace
+         left_brace_curly MARKER STATEMENT right_brace_curly
+         {
+            back_patch ($8.next_list, $3);
+            back_patch ($4.true_list, $7);
+            $$.next_list = $4.false_list;
+            output_byte_code.insert({pc, ": goto " + to_string($3)});
+            pc += 3;
+         };
 
-
-
+FOR :
+        for_s
+        left_brace
+        ASSIGNMENT
+        MARKER
+        BOOLEAN_EXPRESSION
+        semi_colon
+        MARKER
+        ASSIGNMENT
+        NEXT_MARKER
+        right_brace
+        left_brace_curly
+        MARKER
+        STATEMENT
+        NEXT_MARKER
+        right_brace_curly
+        {
+            back_patch($5.true_list,$12);
+            back_patch($9.next_list,$4);
+            back_patch($14.next_list,$7);
+            back_patch($13.next_list,$7);
+            $$.next_list = $5.false_list;
+        };
 
 %%
 
-std::vector<int> make_list(int curr_pc)
+std::vector<int> *make_list(int curr_pc)
 {
-    std::vector<int> made_list = {curr_pc};
+    std::vector<int> *made_list = new vector<int>({curr_pc});
     return made_list;
 }
 
-std::vector<int> merge_list(std::vector<int> true_l, std::vector<int> false_l)
+std::vector<int> *merge_list(std::vector<int> *true_l, std::vector<int> *false_l)
 {
-    std::vector <int> merged_list;
-    std::set_union(true_l.begin(), true_l.end(),
-                       false_l.begin(), false_l.end(),
-                       std::back_inserter(merged_list));
+    std::vector <int> *merged_list = new vector<int> (*true_l);
+    merged_list->insert(merged_list->end(), false_l->begin(), false_l->end());
     return merged_list;
 }
 
-void back_patch(std::vector<int> list, int curr_location)
+void back_patch(std::vector<int> *list, int curr_location)
 {
-    for (auto curr : list)
+    for (auto curr : *list)
     {
         auto it = find_if(output_byte_code.begin(), output_byte_code.end(),
                       [&](const std::pair<int, std::string>& val) -> bool {

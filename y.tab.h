@@ -60,8 +60,8 @@ extern int yydebug;
     addop = 263,
     mulop = 264,
     bitop = 265,
-    semi_colon = 266,
-    boolean = 267,
+    boolean = 266,
+    semi_colon = 267,
     assignment = 268,
     left_brace = 269,
     right_brace = 270,
@@ -87,8 +87,8 @@ extern int yydebug;
 #define addop 263
 #define mulop 264
 #define bitop 265
-#define semi_colon 266
-#define boolean 267
+#define boolean 266
+#define semi_colon 267
 #define assignment 268
 #define left_brace 269
 #define right_brace 270
@@ -114,13 +114,18 @@ union YYSTYPE
 	int ival;
 	float fval;
 	char* sval;
-	typedef struct
-	{
-	    vector<int> true_list, false_list;
-	} boolean_expr;
+    struct
+        {
+            vector<int> *true_list, *false_list;
+        } b_expr;
+    struct
+        {
+            vector<int> *next_list;
+        } stmt_;
+
 	int type;
 
-#line 124 "y.tab.h" /* yacc.c:1909  */
+#line 129 "y.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

@@ -386,7 +386,7 @@ struct yy_trans_info
 	};
 static yyconst flex_int16_t yy_accept[67] =
     {   0,
-        0,    0,   27,   25,   26,   25,    8,    9,   11,   12,
+        0,    0,   27,   25,   26,    6,    8,    9,   11,   12,
         7,    7,    2,    1,    5,   10,    5,   24,   15,   16,
        24,   24,   24,   24,   24,   24,   13,    9,   14,    5,
         6,    2,    0,    2,   24,   24,   24,   24,   24,   24,
@@ -807,7 +807,7 @@ YY_RULE_SETUP
 case 4:
 YY_RULE_SETUP
 #line 13 "lexical_analyzer_java.l"
-{yylval.sval = strdup(yytext); boolean;}
+{yylval.sval = strdup(yytext); return boolean;}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP

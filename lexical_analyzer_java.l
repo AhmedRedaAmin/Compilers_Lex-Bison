@@ -10,9 +10,9 @@
 ";"		                    return semi_colon;
 "-"?[0-9]+                  {yylval.ival = atoi(yytext) ; return integer_val;}
 "-"?[0-9]+.[0-9]+           {yylval.fval = atof(yytext) ; return float_val;}
-"true"|"false"              {yylval.sval = strdup(yytext); boolean;}
+"true"|"false"              {yylval.sval = strdup(yytext); return boolean;}
 "=="|"!="|">"|">="|"<"|"<=" {yylval.sval = strdup(yytext);return relop;}
-"&&"|"||"                   {yylval.sval = strdup(yytext);return boolop;}
+"&&"|"||"|"!"               {yylval.sval = strdup(yytext);return boolop;}
 "+"|"-"                     {yylval.sval = strdup(yytext);return addop;}
 "*"|"/"|"%"                 {yylval.sval = strdup(yytext);return mulop;}
 "&"|"|"                     {yylval.sval = strdup(yytext);return bitop;}
